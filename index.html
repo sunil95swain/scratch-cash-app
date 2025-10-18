@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Subscribe & Scratch Card</title>
+    <style>
+      body {
+        font-family: sans‑serif;
+        padding: 20px;
+        max-width: 400px;
+        margin: auto;
+      }
+      #formSection,
+      #scratchSection {
+        display: none;
+      }
+      #rewardAmount {
+        font-size: 2em;
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Welcome!</h1>
+    <div id="subscribeSection">
+      <p>Please subscribe to our YouTube channel:</p>
+      <!-- Put YouTube subscribe button or link -->
+      <p>
+        <a
+          href="https://www.youtube.com/channel/UC7qjNoEQzLUHmKzseWHHXSA"
+          target="_blank"
+          >Click here to subscribe</a
+        >
+      </p>
+      <button id="btnAfterSubscribe">I have subscribed, continue</button>
+    </div>
+
+    <div id="formSection">
+      <h2>Enter your details to get scratch card</h2>
+      <form id="userForm">
+        <label
+          >Name:<br /><input
+            type="text"
+            name="name"
+            id="name"
+            required /></label
+        ><br /><br />
+        <label
+          >Mobile:<br /><input
+            type="text"
+            name="mobile"
+            id="mobile"
+            required /></label
+        ><br /><br />
+        <label
+          >Email:<br /><input
+            type="email"
+            name="email"
+            id="email"
+            required /></label
+        ><br /><br />
+        <button type="submit">Submit</button>
+      </form>
+      <div id="formMessage"></div>
+    </div>
+
+    <div id="scratchSection">
+      <h2>Scratch & Reveal your reward!</h2>
+      <canvas
+        id="scratchCanvas"
+        width="300"
+        height="150"
+        style="border: 1px solid #ccc"
+      ></canvas
+      ><br />
+      <div id="rewardMessage"></div>
+      <button id="btnDone">Done</button>
+    </div>
+
+    <script>
+      const SCRIPT_URL =
+        "https://script.google.com/macros/s/AKfycbzjoEMwENuR1x7x9PqhRBJLlXLJ8xDpNjG-TAidCVKUm7Bj6r8dy8siWY0Wy95D-XKG/exec";
+
+      document
+        .getElementById("btnAfterSubscribe")
+        .addEventListener("click", () => {
+          document.getElementById("subscribeSection").style.display = "none";
+          document.getElementById("formSection").style.display = "block";
+        });
+
+      document.getElementById("userForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const name = document.getElementById("name").value.trim();
+        const mobile = document.getElementById("mobile").value.trim();
+        const email = document.getElementById("email").value.trim();
+
+        document.getElementById("formMessage").innerText = "Submitting...";
+        fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({ name, mobile, email }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "duplicate") {
+              document.getElementById("formMessage").innerText =
+                "You have already participated.";
+            } else if (data.status === "ok") {
+              document.getElementById("formSection").style.display = "none";
+              startScratchCard(data.reward);
+            } else {
+              document.getElementById("formMessage").innerText =
+                "Error: " + (data.message || "Unknown");
+            }
+          })
+          .catch((err) => {
+            document.getElementById("formMessage").innerText =
+              "Error submitting. Please try again.";
+            console.error(err);
+          });
+      });
+
+      function startScratchCard(amount) {
+        document.getElementById("scratchSection").style.display = "block";
+        const canvas = document.getElementById("scratchCanvas");
+        const ctx = canvas.getContext("2d");
+        const W = canvas.width,
+          H = canvas.height;
+
+        // draw the overlay
+        ctx.fillStyle = "#999";
+        ctx.fillRect(0, 0, W, H);
+        ctx.font = "20px sans-serif";
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "center";
+        ctx.fillText("Scratch here", W / 2, H / 2);
+
+        let isDrawing = false;
+
+        const reveal = () => {
+          ctx.clearRect(0, 0, W, H);
+          document.getElementById("rewardMessage").innerText =
+            "Congratulations! You won ₹" + amount;
+        };
+
+        canvas.addEventListener("mousedown", () => (isDrawing = true));
+        canvas.addEventListener("mouseup", () => {
+          if (isDrawing) reveal();
+          isDrawing = false;
+        });
+        canvas.addEventListener("mousemove", (e) => {
+          if (isDrawing) {
+            const rect = canvas.getBoundingClientRect();
+            ctx.clearRect(
+              e.clientX - rect.left - 15,
+              e.clientY - rect.top - 15,
+              30,
+              30
+            );
+          }
+        });
+
+        document.getElementById("btnDone").addEventListener("click", () => {
+          document.getElementById("rewardMessage").innerText += "\nThank you!";
+        });
+      }
+    </script>
+  </body>
+</html>
